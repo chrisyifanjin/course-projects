@@ -1,6 +1,16 @@
 # Projects
 
-Data2002 Projects contains survey data from cohort of 2019 using R (Data2002)
+**Data2002** 
 
-Fertility projects is using econometric methods and models to analyse fertility data using Stata, the code is at the end of the pdf file (ECMT2150)
+This is a survey conducted by Dr.Garth about the characteristics and some demographic information about students.
+
+1: Cleaning data to remove unusual data among the data, improving data quality for further analysis 
+
+2: Using multiple test methods including t-test, Welch test and Wilcoxon rank-sum test to test the relationship between variables using R.
+
+**Ecmt2150**
+
+This project involves the application of a range of econometric methods in analysing the effect of schooling or education on women’s fertility.
+
+1: This analysis contains 5 parts, including Descriptive statistics, Multiple regression model: Estimation and Testing, Check for heteroskedasticity, Instrumental Variables and Summary of finding using Stata.
 
