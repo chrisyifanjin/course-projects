@@ -4,7 +4,7 @@
 
 ## Data2002 ## 
 
-[**Data analysis on Data2002 class survey**](https://github.com/chrisyifanjin/course-projects/tree/master/Data2002%20/Data2002_Survey)
+[**Data analysis on Data2002 class survey**](https://github.com/chrisyifanjin/course-projects/tree/master/Data2002%20/Data2002_Survey_Project)
 
 This is a survey conducted by Dr.Garth about the characteristics and some demographic information about students.
 
