@@ -2,7 +2,7 @@
 
 *There are projects done from my coursework at university*
 
-**Data2002** 
+## Data2002 ## 
 
 This is a survey conducted by Dr.Garth about the characteristics and some demographic information about students.
 
@@ -10,7 +10,7 @@ This is a survey conducted by Dr.Garth about the characteristics and some demogr
 
 2: Using multiple test methods including t-test, Welch test and Wilcoxon rank-sum test to test the relationship between variables using R.
 
-**Ecmt2150**
+## Ecmt2150 ##
 
 This project involves the application of a range of econometric methods in analysing the effect of schooling or education on women’s fertility.
 
