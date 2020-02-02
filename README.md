@@ -1,5 +1,7 @@
 # Projects
 
+*There are projects done from my coursework at university*
+
 **Data2002** 
 
 This is a survey conducted by Dr.Garth about the characteristics and some demographic information about students.
