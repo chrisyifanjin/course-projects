@@ -1,0 +1,91 @@
+---
+title: 'Model selection, Assumption checking and Model Evaluation '
+author: '470518795'
+date: "27/10/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, results='hide'}
+library(MASS)
+library(dplyr)
+ourdata <- birthwt %>% mutate(
+  race = factor(race, labels = c("white", "black", "other")), #organise race
+  smoke = factor(smoke, labels = c("False", "True")), #organise smokes
+  ui =factor(ui,labels=c("Yes","No")),
+  low=factor(low),
+  ht=factor(ht)
+  
+)
+ourdata<-dplyr::select(ourdata,-c(low))
+ourdata
+```
+
+# Model selection
+
+
+```{r}
+# 1: Run a full multiple regression
+bwt_lm1=lm(ourdata$bwt ~ .,data = ourdata)
+summary(bwt_lm1)
+# 2: Backward search using AIC
+step_back_aic<-step(bwt_lm1,direction = "backward",trace = F)
+step_back_aic
+summary(step_back_aic)
+```
+
+
+```{r}
+# 3: Run a null multiple regression model
+bwt_lm2=lm(ourdata$bwt ~ 1,data = ourdata)
+# 4: Forward search using AIC
+step_fwd_aic=step(bwt_lm2,scope = list(lower=bwt_lm2,upper=bwt_lm1),direction = "forward",trace = F)
+summary(step_fwd_aic)
+# By both forward and backwards search alogarithm with AIC, we get the same results.  
+```
+
+```{r}
+# Then we try to adding or subtracting other variables, to see whether we can get a smaller aic, however, we found by adding or subtracting one variable, we will always get a large aic
+add1(step_fwd_aic,test="F",scope=bwt_lm1)
+drop1(step_fwd_aic) 
+# This result supports our model.
+```
+
+```{r}
+# We also can use the backward selection using p-value
+drop1(bwt_lm1,test="F")
+M2=update(bwt_lm1,. ~ .- ftv)
+drop1(M2,test = "F")
+M3=update(M2,.~.-age)
+drop1(M3,test="F")
+M4=update(M3,.~.-ptl)
+drop1(M4,test = "F")
+M4
+summary(M4)
+# To sum up, we uses three methods to select model, fortunately, we get the same result. Because of this, we are quite confident about the the regression model we used. Next, we will check the assumption.
+```
+
+# Assumption checking
+```{r}
+# 1:Linearity
+## after runing the regression we check the fitted values vs residuals
+library(ggfortify)
+autoplot(M4, which=1:2)+theme_bw()
+# By looking at the plot, there is no obvious pattern in the residual vs fitted values plot so it does not appear that we have misspecified the model
+# Homoskedasticity: the residuals do not appear to be changing their variability over the range of the fitted values, so the constant error variance assumption is met
+# Normality: in the QQ plot, the points are reasonably close to the diagonal line. The top are not quite on the line, but it’s not severe enough departure to cause too much concern. The normality assumption is at least approximately satisfied.
+```
+
+```{r}
+library(caret)
+set.seed(2)
+cv_full = train(data = ourdata, bwt ~., method = 'lm', trControl= trainControl(method='cv',number = 10, verboseIter = FALSE))
+cv_full
+cv_simplified = train(data = ourdata, bwt ~ lwt + race + smoke + ht + ui, method = 'lm', trControl= trainControl(method='cv',number = 10, verboseIter = FALSE))
+cv_simplified
+```

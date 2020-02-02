@@ -1,0 +1,239 @@
+---
+title: "T15-03 Presentation"
+author: "Yifan Jin, Stuart Morrison, Derek Ng, Christopher Saad"
+date: "31/10/2019"
+output:
+  html_document: default
+  revealjs::revealjs_presentation:
+    fig_height: 12
+    fig_width: 15
+    theme: solarized
+---
+
+## Introduction
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=12, fig.height=4) 
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(wesanderson)
+# devtools::install_github("karthik/wesanderson")
+library(scales)
+library(stringr)
+library(grid)
+library(gridExtra)
+library(caret)
+library(broom)
+library(kableExtra)
+```
+
+- Dataset representing prenatal risk factors and child birth weight
+- We examine how certain risk factors mothers show while pregnant effect the infant's birth weight with a multiple lienar regression model
+- We find that each of the risk factors we examine has a statistically significant effect on a infant's birth weight - ie, putting the infant at risk
+
+## The data we use in our analysis
+
+- Our data was originally collected by physicians in 1986 to examine the effects of risk factors on the birth weight of an infant (Hosmer, David W., et al., 2013) - included in the `MASS` package
+- Low birth weight is associated with higher infant morality rates and birth defect rates
+- It contains observations on 189 different pregnancies
+ 
+
+## Having a look at the data
+
+- There are 10 variables included in the data
+- The key dependent variable for this analysis is:
+  + `birthwt` - a variable measuring the infant's weight at birth
+- The risk factors we examine are:
+  + the racial background of the mother
+  + whether the mother is a smoker
+  + whether the mother has had a premature labour before
+  + whether the mother experiences hypertension
+  + whether the mother experiences physical irritability
+
+```{r message=FALSE,error=FALSE,echo=FALSE}
+library(MASS)
+ourdata <- birthwt %>% 
+            mutate(
+                    # Reduce number of premature labours to true or false.
+                    race = factor(race, labels = c("White", "Black", "Other")), # Organise race
+                    smoke = factor(smoke, labels = c("False", "True")), # Organise smokes
+                    ftv = factor(ftv)
+                   )
+levels(ourdata$ftv)[-(1:2)] <- "2+" # Organises physicisian visits to, 0, 1 or 2+.
+colnames(ourdata) <- c("below_2500", "age",
+                      "mother_weight", "race",
+                      "smokes", "previous_prem_labor",
+                      "hypertension", "uterine_irr",
+                      "physician_visits", "birth_weight")
+ourdata <- dplyr::select(ourdata, -c(below_2500))
+```
+
+## The distribution of birth weights
+
+- `r (sum(ourdata$birth_weight < 2500) / nrow(ourdata)) %>% percent()` of the infants in our data had a clinically low birth weight
+
+```{r message=FALSE,error=FALSE,echo=FALSE}
+ggplot()+
+  # Plot histogram of birth weights
+  geom_histogram(data = ourdata,
+                 aes(x = birth_weight),
+                 fill = wes_palettes$Zissou1[1]) +
+  # Put a vertical line at what is considered low birth weight, ie, 2500 grams
+  geom_vline(xintercept = 2500,
+             linetype = 2, size = 1.2,
+             col = wes_palettes$Zissou1[3]) +
+  # Make labels, etc pretty
+  theme_bw(base_size = 18) +
+  labs(x = "Birth weight (grams)",
+       y = "Frequency") +
+  scale_x_continuous(labels = comma) +
+  theme(panel.background = element_rect(fill = "transparent"))
+  
+```
+
+## The demographics represented in our data
+
+```{r message=FALSE,error=FALSE,echo=FALSE}
+# Plot a frequency plot of age
+g_age <- ggplot() +
+  facet_wrap(~ variable) +
+  geom_bar(data = ourdata %>%
+                    dplyr::select(age) %>%
+                    gather(variable, value) %>%
+                    mutate(variable = stringr::str_to_title(variable)),
+           aes(x = value), fill = wes_palettes$Darjeeling1[2],
+           stat = "count") +
+  # Plot a bar at the median age
+  geom_vline(xintercept = median(ourdata$age),
+             linetype = 2, size = 1.2,
+             col = wes_palettes$Darjeeling1[1]) +
+  labs(x = "", y = "Frequency") +
+  theme_bw(base_size = 18) +
+  theme(panel.background = element_rect(fill = "transparent"))
+# Plot a frequency plot of smoking
+g_smoke <- ggplot() +
+  facet_wrap(~ variable) +
+  geom_bar(data = ourdata %>%
+                    dplyr::select(smokes) %>% 
+                    gather(variable, value) %>% 
+                    mutate(variable = stringr::str_to_title(variable)),
+           aes(x = value), fill = wes_palettes$Darjeeling1[3],
+           stat = "count") +
+  labs(x = "", y = "") +
+  theme_bw(base_size = 18) +
+  theme(panel.background = element_rect(fill = "transparent"))
+# Plot a frequency plot of race
+g_race <- ggplot() +
+  facet_wrap(~ variable) +
+  geom_bar(data = ourdata %>%
+                    dplyr::select(race) %>% 
+                    gather(variable, value) %>% 
+                    mutate(variable = stringr::str_to_title(variable)),
+           aes(x = value), fill = wes_palettes$Darjeeling1[4],
+           stat = "count") +
+  labs(x = "", y = "") +
+  theme_bw(base_size = 18) +
+  theme(panel.background = element_rect(fill = "transparent"))
+# Plot each of the plots together
+gridExtra::arrangeGrob(g_age, g_smoke, g_race, nrow = 1) %>% 
+  plot()
+```
+
+## Data cleaning and verascity 
+
+- No variables appear to have erroneous measurements - birth weights and ages are in in the expected range
+- We convert categorical variables to factors
+- Drop extraneous variables from the data, such as the indicator function `low` that shows whether the infant had a low birthweight
+
+## Model selection
+
+- AIC is an indicator of quality of model - the less AIC the better quality we get
+
+- Three approaches: 
+  + `Backward selection with AIC` - drop variables in full model to get model which has lower AIC
+  + `Forward selection with AIC` - add variables in null model to get model which has lower AIC
+  + `Backward selection with p-value` - drop the variable with largest p-value in orginal model
+
+## Model selection (cont.)
+
+- Result:
+
+```{r message=FALSE,error=FALSE,echo=FALSE}
+# Run the linear model with all variables
+bwt_lm1 = lm(ourdata$birth_weight ~ ., data = ourdata)
+# Find the model based on AIC
+step_back_aic <- step(bwt_lm1, direction = "backward", trace = F)
+# Print the summary of the model
+broom::tidy(step_back_aic) %>% 
+  kable(digits = 2) %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), 
+                      full_width = TRUE)
+```
+
+
+
+## Assumptions checking
+- The residuals $\varepsilon_i$ are $iid$ $N(0,\sigma^2)$ and there is a linear relationship between y and x.
+  + Linearity
+  + Independence
+  + Homoskedasticity
+  + Normality
+  
+
+## Linearity, Independence and Homoskedasticity
+```{r,message=FALSE,error=FALSE,echo=FALSE,size="Large"}
+library(ggfortify)
+autoplot(step_back_aic, which = 1) +
+  theme_bw(base_size = 18)
+```
+
+## Normality
+```{r,message=FALSE,error=FALSE,echo=FALSE}
+library(ggfortify)
+autoplot(step_back_aic, which=2)+theme_bw(base_size = 18)
+```
+
+
+
+## Results - Interpretation of Coefficients
+
+```{r,message=FALSE,error=FALSE,echo=FALSE}
+broom::tidy(step_back_aic) %>% 
+  kable(digits = 2) %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), 
+                      full_width = TRUE)
+```
+
+## Results - In-sample Performance
+- Full Model
+```{r}
+summary(bwt_lm1)$r.squared
+```
+- Simplified Model
+```{r}
+summary(step_back_aic)$r.squared
+```
+## Results - Out-of-sample Performance
+- Full Model
+```{r,message=FALSE,error=FALSE,echo=FALSE}
+set.seed(2)
+cv_full = train(data = ourdata, birth_weight ~., method = 'lm', trControl= trainControl(method='cv',number = 10, verboseIter = FALSE))
+cv_full
+```
+## Results - Out-of-sample Performance
+- Simplified Model
+```{r,message=FALSE,error=FALSE,echo=FALSE}
+cv_simplified = train(data = ourdata, birth_weight ~ mother_weight + race + smokes + hypertension + uterine_irr, method = 'lm', trControl= trainControl(method='cv',number = 10, verboseIter = FALSE))
+cv_simplified
+```
+
+## Conclusion
+
+- We examined how certain risk factors effect the infant's birth weight
+- We applied a multiple linear regression model to delineate the effect of each of the factors
+- We find that each of the risk factors we examine have a statistically significant effect on a infant's birth weight - ie, putting the infant at risk
+- Potential limitation - data was recorded at a charity health centre so our data may not represent the population of mothers
