@@ -12,7 +12,7 @@ This is a survey conducted by Dr.Garth about the characteristics and some demogr
 
 **2 Statistical Test:** Using multiple test methods including t-test, Welch test and Wilcoxon rank-sum test to test the relationship between different variables using **R**.
 
-[**Analysis of plausible factors that may affect birth weight**](https://github.com/chrisyifanjin/course-projects/tree/master/Data2002%20/Data2002_Birthweight_Project)
+[**Prediction of Birth Weight**](https://github.com/chrisyifanjin/course-projects/tree/master/Data2002%20/Data2002_Birthweight_Project)
 
 This is the final group project, we build a model try to identify the plausible factors affecting birth weight.
 
