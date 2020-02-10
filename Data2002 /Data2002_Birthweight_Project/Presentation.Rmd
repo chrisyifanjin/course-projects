@@ -3,6 +3,7 @@ title: "T15-03 Presentation"
 author: "Yifan Jin, Stuart Morrison, Derek Ng, Christopher Saad"
 date: "31/10/2019"
 output:
+  pdf_document: default
   html_document: default
   revealjs::revealjs_presentation:
     fig_height: 12
