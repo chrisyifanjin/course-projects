@@ -8,7 +8,7 @@
 
 This is a survey conducted by Dr.Garth about the characteristics and some demographic information about students.
 
-**1 Cleaning data:**  The tasks including: tackling missing value, unrealistic value and the format issue.
+**1 Cleaning data:**  The tasks including: tackling missing value, unrealistic value and the formatting issue.
 
 **2 Statistical Test:** Using multiple test methods including t-test, Welch test and Wilcoxon rank-sum test to test the relationship between different variables using **R**.
 
