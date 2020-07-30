@@ -27,7 +27,17 @@ This is the final group project, we build a model try to identify the plausible 
 ``Thanks to my team members, they are very helpful and responsible!`` ❤️
 
 ## OLET1632 ##
-[**Childcare Centres in Sydney and Melbourne**]()
+[**Childcare Centres in Sydney and Melbourne**](https://github.com/chrisyifanjin/course-projects/tree/master/OLET1632)
+
+This Project analyses the dataset relating to Child Care Benefit (CCB) approved child care services in Greater Sydney and Greater Melbourne.
+
+The analysis contains Initial Data Analysis, Data cleaning and Research questions.
+
+**1. Initial Data Analysis:** The part involves Background to report, including purpose, stakeholders and data (eg source, ethics, limitations).
+
+**2. Data cleaning:** Inclusion of angle brackets to indicate multiple ‘less than’ values for two variables within the data set is a limitation that may make some statistical analyses difficult to conduct. We tackle this problem by assigning 2.5 and 5 to ambiguous value 'less than 5' and 'less than 10' assuming it is discrete uniform distribution.
+
+**3. Research questions:** 1. Which services type is most effective? and 2. Is the average of the mean childcare fee same across time? If it is different, what might be the reason? and the possible reasons. Package and techiniques being used: `ggplot`,`tidyverse`,`One-way ANOVA test`.
 
 ## Ecmt2150 ##
 
