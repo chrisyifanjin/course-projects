@@ -1,0 +1,205 @@
+---
+title: "OLE Shark Bites and Other Data Stories"
+author: "SID(s): 470518795 480043331 500435643"
+subtitle: "Report: Childcare Centres in Sydney and Melbourne"
+date: "University of Sydney | July 2020"
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+    self_contained: yes
+    theme: flatly
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+---
+```{r,message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library("RColorBrewer")
+library(tidyverse)
+```
+
+<br>
+
+# Executive Summary
+
+- The aim of this report is to analyse the dataset relating to Child Care Benefit (CCB) approved child care services in Greater Sydney and Greater Melbourne.
+
+- This report used the Child Care Administrative Data (CCAD) from the Department of Education and Training.
+
+- CCAD contains information relating to long day care (LDC), after school hours care (ASC) and before school hours care (BSC).
+
+- The main discoveries of the report include:
+    - The average of the mean childcare fee increasing over different financial years, with one of the possible reasons being the increased cost of providing childcare services. 
+    - The most cost-effective child care on average being After school hours care (ASC).
+
+<br>
+
+# Full Report
+
+## Initial Data Analysis (IDA)
+
+```{r,warning=FALSE}
+# Load Data direct from html
+childcare = read.csv("http://www.maths.usyd.edu.au/u/UG/OL/OLEO1631/r/livelabs/report/data/child_care_administrative_data.csv")
+
+# Quick look at data
+head(childcare)
+dim(childcare)
+str(childcare)
+```
+
+
+- The data used in this analysis is the Child Care Administrative Data (CCAD), compiled by the Department of Education and Training (Department of Education and Training, 2017). Published on the 26th of July 2017, CCAD was sourced from Australian open government data website, Data.gov.au (Australian Government, n.d).
+
+- With 4042 observations and 9 variables, CCAD details information on Child Care Benefit (CCB) approved child-care services in the Greater Sydney and Melbourne areas; spanning four financial years from 2012 to 2016 (Australian Government, 2017). 
+
+- Stakeholders and interest groups include the Australian Government’s Department of Education and Training, Skills and Employment, both non-for profit and private child-care industries, and other relevant government bodies associated with subsidies and family assistance. 
+
+- With studies revealing mixed child-care arrangements increasingly allow for greater maternal employment (Brady & Perales, 2016), the private child-care sector in particular may be interested in the findings of this data. CCAD is considered ethical as it does not include any personal, identifiable information. The data is open access, collected by a government body, and contains no information about individual children, parents or child-care centres. 
+
+- However, limited by an inability to distinguish between individual child-care services, the conclusions of an analysis may be prone to the confounding effects of an individual child-care centre’s standard of service and/or popularity.  Temporal limitations in the data are also evident, where data from preceding or more recent financial years may have aided in identifying trends or patterns more accurately. Lastly, the inclusion of angle brackets to indicate multiple ‘less than’ values for two variables within the data set is a limitation that may make some statistical analyses difficult to conduct. 
+
+## Data cleaning
+```{r,warning=FALSE}
+childcare$fee_hr_mean = as.numeric(gsub("\\$","",childcare$fee_hr_mean))
+childcare$fee_hr_std=as.numeric(gsub("\\$","",childcare$fee_hr_std))
+childcare$child_count=as.numeric(gsub(",","",childcare$child_count))
+childcare$child_count[is.na(childcare$child_count)]=5
+childcare <-childcare %>% 
+  mutate(service_count=replace(service_count,service_count=="     <5",NA))
+childcare$service_count=as.numeric(gsub(",","",childcare$service_count))
+childcare$service_count[is.na(childcare$service_count)]=2.5
+```
+
+The data cleaning consists of converting: 
+
+**1.** Variables that R recognized incorrectly as categorical to numerical.
+
+**2.** 'Less than 5' and 'less than 10' values to 2.5 and 5 respectively.
+
+<br>
+
+# Research Questions
+
+## Which Service Type is the most cost effective for child care?
+
+```{r}
+df1<-childcare
+df1$Servicetype <- factor(df1$Servicetype, levels=c("BSC", "LDC", "ASC"))
+boxplot_fee_mean <- ggplot(df1,aes(Servicetype,fee_hr_mean))+
+  geom_boxplot(col=brewer.pal(n=3,name="Set2"))
+boxplot_child_count_mean <- ggplot(df1,aes(Servicetype,child_count))+
+  geom_boxplot(col=brewer.pal(n=3,name="Set2"))
+boxplot_service_count_mean <- ggplot(df1,aes(Servicetype,service_count))+
+  geom_boxplot(col=brewer.pal(n=3,name="Set2"))
+ggarrange(boxplot_fee_mean,boxplot_child_count_mean,boxplot_service_count_mean, ncol=3,nrow=1)
+```
+
+```{r,message=FALSE}
+df_select <- df1 %>% select(Servicetype,fee_hr_mean,child_count,service_count)
+df_select %>% 
+  group_by(Servicetype) %>% 
+  summarise(mean_fee_hr=mean(fee_hr_mean),
+            mean_child_count=mean(child_count),
+            mean_service_count=mean(service_count))
+```
+Summary:
+
+- (LDC) Long day care costs the highest fees, $8.67 per hour with the highest service count and the highest number of children.
+
+- (BSC) Before school hours care provides the lowest number of services for the smallest number of children, but the cost is close to the LDC cost which is $8.59.
+
+- (ASC) After school hours care is cost effective since the mean of the fee per hour is much lower than the other two service types, at $7.29. Besides, the number of CCB approved child care services and number of children is around half that of the Long day care.
+
+- Therefore, the most cost effective child care on average is After school hours care (ASC).
+
+Reason:
+
+Parents might set hours for their work to fit in with the children's school day or they have a fly-in, fly-out job, but sometimes parents have to work when kids are home from school. They are looking for someone or an institution that could help children for daycare, do drop-offs and pick-ups, prepare meals, and help with homework. The high demand from parents is one possible reason why ASC is the most cost-effective (Care for Kids).
+
+
+Stakeholders:
+
+First, this research question might benefit parents, allowing them to find quality and affordable child care for their kids.
+
+Besides, the Government is working hard to service different regions and fill the gaps in access to clear waiting lists in areas of high demand. For example, The NSW Government deliver on providing $120 million to expand access to before and after school care for public primary school children across NSW (NSW Government).
+
+It could also support care providers to deliver higher quality and affordable before school care and long day care.
+
+## Is the average of the mean childcare fee same across time? If it is different, what might be the reason?
+
+```{r}
+df2<-childcare
+ggplot(df2,aes(x=FY,y=fee_hr_mean))+
+  stat_boxplot(geom = "errorbar",width=0.2)+
+  geom_boxplot(outlier.shape = 1,fill=c("green","yellow","pink","blue"))+
+  labs(x="Financial Year",y="Average childcare fee",title = "The distribution of childcare fee in different financial year")
+```
+
+
+- It is obvious that there is an increasing trend of the mean childcare fee. To test whether the average of mean childcare fee is the same across the years, one-way ANOVA can be used.
+
+- One important assumption of one-way ANOVA is that the data is normally distributed. The QQplot is used to check normality. If the sample has little or no deviation from the normality line, then it is assumed the data is normal.
+
+```{r}
+df2 %>% ggplot(aes(sample=fee_hr_mean,colour=FY))+
+  geom_qq()+
+  geom_qq_line()+
+  facet_wrap(~FY)+
+  theme_classic(base_size = 16)
+```
+
+- It is obvious that there is a deviation from the line in in FY15 and FY16.
+
+- The log transformation makes our data in FY15 and FY16 to be normal.
+
+```{r}
+df2 %>% ggplot(aes(sample=log(fee_hr_mean),colour=FY))+
+  geom_qq()+
+  geom_qq_line()+
+  facet_wrap(~FY)+
+  theme_classic(base_size = 16)
+```
+
+```{r}
+anova(lm(log(df2$fee_hr_mean)~df2$FY))
+```
+
+
+**One-way ANOVA**
+
+**1. Hypothesis**: \(H_0:\mu_{FY13}=\mu_{FY14}=\mu_{FY15}=\mu_{FY16}\) vs \(H_1:\) at least one \(\mu_{i}\neq \mu_{j}\)
+
+**2. Assumptions**: The population of mean childcare fee is normally distributed.
+
+**3. Test statistic**: \(T=\frac{\text { Treatment Mean Sq }}{\text { Residual Mean Sq }}\). Under \(H_0, T \sim F_{g-1,N-g}\) where g is the number of groups.
+
+**4. Observed test statistics**: \(t_0=4.66/0.026=181.48\)
+
+**5. p-value**: \(P(T>=t_0)=P(F_{3,4038}>181.48)<0.001\)
+
+**6. Decision**: The p-value is less than 0.001, we reject the null hypothesis that it is same each year.
+
+- In conclusion, the average of the childcare fee is different across the years. However, it is not reasonable to conclude that these two variables are casually related since the ceteris paribus is not satisfied.
+
+- One possible reason is the increased cost of childcare services. There has been real costs increased by 56%, but government subsidies haven't increased in real terms. (The conversation, 2017)
+
+# References
+
+- Australian Government. (2017). Child Care Administrative Data. Retrieved from https://data.gov.au/dataset/ds-dga-9923c11b-aa7e-4bb6-afd9-b17674347fdd/details
+
+- Australian Government. (n.d). About. Retrieved from https://search.data.gov.au/page/about
+
+- Ben, M. (2017). FactCheck: what are the facts on rising child care prices? *The Conversation*. Retrieved from https://theconversation.com/factcheck-what-are-the-facts-on-rising-child-care-prices-71014
+
+- Brady, M., & Perales, F. (2016). Hours of Paid Work Among Single and Partnered Mothers in Australia: The Role of Child Care Packages. *Journal of Family Issues, 37*(3), 321–343. https://doi.org/10.1177/0192513X14531416
+
+- Care for Kids. (2015). Cost effective options for after school care. Retrieved from: https://www.careforkids.com.au/child-care-articles/article/144/cost-effective-options-for-after-school-care
+
+- NSW Government. Before and After School Care (BASC). Retrieved from: https://education.nsw.gov.au/public-schools/going-to-a-public-school/primary-schools/before-and-after-school-care#For1
+
+- Department of Education and Training. (2017). Child Care Administrative Data [Data set]. Retrieved from https://data.gov.au/dataset/9923c11b-aa7e-4bb6-afd9-b17674347fdd/resource/5b6f578d-1d1e-4f97-a285-706dafdb9cbc/download/child-care-administrative-data.csv
