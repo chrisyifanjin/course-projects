@@ -1,0 +1,204 @@
+---
+title: "ecmt3130_code"
+author: "Yifan Jin"
+date: "12/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(tseries)
+library(ggplot2)
+library(lmtest)
+library(sandwich)
+library(dplyr)
+library(knitr)
+```
+
+# Data Processing
+```{r}
+setwd("~/Desktop/ecmt3130_project")
+data=read.csv("PriceData.csv")
+mydata=data %>% select(Commodity.9)
+head(mydata,4)
+```
+
+
+```{r}
+mydata=mydata[4:nrow(mydata),]
+y<- as.numeric(mydata)
+logy<-log(y)
+ts.plot(y)
+```
+
+```{r}
+dt<-data.table(date=seq(as.Date("1992-01-01"),by='month',along.with=logy),y=y,lny=logy)
+```
+
+# Augmented Dickey-Fuller test
+```{r}
+adf.test(logy)
+```
+
+
+# one-step ahead and twelve-step ahead forecast
+```{r}
+dt <- dt[,.(date=date,y=dt$y,l0=dt$lny,l1=shift(dt$lny,1),l2=shift(dt$lny,2),
+            l3=shift(dt$lny,3),l4=shift(dt$lny,4),l5=shift(dt$lny,5),
+            l6=shift(dt$lny,6),l7=shift(dt$lny,7),l8=shift(dt$lny,8),
+            l9=shift(dt$lny,9),l10=shift(dt$lny,10),l11=shift(dt$lny,11),
+            l12=shift(dt$lny,12),l13=shift(dt$lny,13))]
+dt<-dt[complete.cases(dt)]
+```
+
+```{r}
+R<-215
+P<-nrow(dt)-R
+dt_ic<-data.table(lag=c(1:12),SIC=NA)
+for(i in 1:nrow(dt_ic)){
+  fmla<-as.formula(paste("l0",paste0("l",c(1:i),collapse = "+"),sep="~"))
+  reg.ar<-lm(fmla,data=dt)
+  dt_ic$SIC[i] <- log(crossprod(reg.ar$residuals)/(nrow(dt)-1))+log(nrow(dt))*(i+1)/nrow(dt)
+} 
+dt_ic
+```
+
+```{r}
+dt$it1 <- NA
+dt$it2 <- NA
+dt$it3 <- NA
+dt$it4 <- NA
+dt$it5 <- NA
+dt$it6 <- NA
+dt$it7 <- NA
+dt$it8 <- NA
+dt$it9 <- NA
+dt$it10 <- NA
+dt$it11 <- NA
+dt$it12 <- NA
+
+for(i in 1:(P-11)){
+  # iterated forecasts
+  ar2 <- lm(l0~l1+l2,data=dt[i:(R+i-1)])
+  
+  dt$it1[R+i] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i-1),"l0"],dt[(R+i-1),"l1"]))
+  dt$it2[R+i+1] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i),"it1"],dt[(R+i-1),"l0"]))
+  dt$it3[R+i+2] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+1),"it2"],dt[(R+i),"it1"]))
+  dt$it4[R+i+3] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+2),"it3"],dt[(R+i+1),"it2"]))
+  dt$it5[R+i+4] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+3),"it4"],dt[(R+i+2),"it3"]))
+  dt$it6[R+i+5] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+4),"it5"],dt[(R+i+3),"it4"]))
+  dt$it7[R+i+6] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+5),"it6"],dt[(R+i+4),"it5"]))
+  dt$it8[R+i+7] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+6),"it7"],dt[(R+i+5),"it6"]))
+  dt$it9[R+i+8] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+7),"it8"],dt[(R+i+6),"it7"]))
+  dt$it10[R+i+9] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+8),"it9"],dt[(R+i+7),"it8"]))
+  dt$it11[R+i+10] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+9),"it10"],dt[(R+i+8),"it9"]))
+  dt$it12[R+i+11] <- ar2$coefficients%*%as.numeric(c(1,dt[(R+i+10),"it11"],dt[(R+i+9),"it10"]))
+}
+```
+
+
+```{r}
+dt$di1<-NA
+dt$di12<-NA
+for(i in 1:(P-11)){
+  ar21<-lm(l0~l1+l2,data = dt[i:(R+i-1)])
+  ar212<-lm(l0~l12+l13,data=dt[i:(R+i-1)])
+  dt$di1[R+i]<-ar21$coefficients%*%as.numeric(c(1,dt[(R+i-1),"l0"],dt[(R+i-1),"l1"]))
+  dt$di12[R+i+11]<-ar212$coefficients%*%as.numeric(c(1,dt[(R+i-1),"l0"],dt[(R+i-1),"l1"]))
+}
+```
+
+```{r}
+dt$rw1<-NA
+dt$rw12<-NA
+
+for(i in 1:(P-11)){
+  w<-dt$l0[i:(R+i-1)]
+  dt$rw1[R+i]<-w[length(w)]
+  dt$rw12[R+11+i]<-w[length(w)]
+}
+```
+
+
+```{r}
+dt$transform_it1<-exp(dt$it1)
+dt$transform_di12<-exp(dt$di12)
+dt$transform_it12<-exp(dt$it12)
+dt$transform_rw1<-exp(dt$rw1)
+dt$transform_rw12<-exp(dt$rw12)
+```
+
+```{r}
+lambda <- as.matrix(c(1/2,1/2))
+dt$ac <- as.matrix(dt[,.(dt$transform_di12,dt$transform_it12)])%*%lambda
+```
+
+
+# RMSFEs
+```{r}
+dt$it12.e <- dt$y-dt$transform_it12
+dt$it1.e <- dt$y-dt$transform_it1
+dt$di12.e <- dt$y-dt$transform_di12
+dt$ac.e<-dt$y-dt$ac
+dt$rw1.e<-dt$y-dt$transform_rw1
+dt$rw12.e<-dt$y-dt$transform_rw12
+```
+
+```{r}
+sqrt(mean(dt$it1.e^2,na.rm=T))
+sqrt(mean(dt$it12.e^2,na.rm=T))
+sqrt(mean(dt$di12.e^2,na.rm=T))
+sqrt(mean(dt$ac.e^2,na.rm=T))
+sqrt(mean(dt$rw1.e^2,na.rm = T))
+sqrt(mean(dt$rw12.e^2,na.rm = T))
+```
+
+
+# Diebold-Mariano test
+```{r}
+dt$it.rw1 <- dt$rw1.e^2-dt$it1.e^2
+dt$it.rw12 <- dt$rw12.e^2-dt$it12.e^2
+dt$di.rw12 <- dt$rw12.e^2-dt$di12.e^2
+dt$ac.rw12 <- dt$rw12.e^2-dt$ac.e^2
+```
+
+```{r}
+reg.it.rw1 <- lm(it.rw1~1,data=dt) 
+reg.it.rw12<- lm(it.rw12~1,data=dt) 
+reg.di.rw12 <- lm(di.rw12~1,data=dt) 
+reg.ac.rw12 <- lm(ac.rw12~1,data=dt)
+```
+
+```{r}
+summary(reg.it.rw1)
+summary(reg.it.rw12)
+summary(reg.di.rw12)
+summary(reg.ac.rw12)
+```
+
+
+```{r}
+coeftest(reg.it.rw1,vcov. = vcovHAC(reg.it.rw1))
+coeftest(reg.it.rw12,vcov. = vcovHAC(reg.it.rw12))
+coeftest(reg.di.rw12,vcov. = vcovHAC(reg.di.rw12))
+coeftest(reg.ac.rw12,vcov. = vcovHAC(reg.ac.rw12))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
